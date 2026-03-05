@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PatchLab – ставим заплатки на скучные аватары</title>
+    <!-- Подключаем современный шрифт Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body, #root {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 1);
+            font-family: 'Bungee Shade', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        :root {
+            --scroll-dist: 0px;
+        }
+
+        @keyframes scrollRow {
+            from { transform: translateX(0); }
+            to { transform: translateX(calc(-1 * var(--scroll-dist))); }
+        }
+        @keyframes scrollRowReverse {
+            from { transform: translateX(calc(-1 * var(--scroll-dist))); }
+            to { transform: translateX(0); }
+        }
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px #8b5cf64d, 0 0 60px #8b5cf61a; }
+            50% { box-shadow: 0 0 30px #8b5cf6, 0 0 80px #8b5cf633; }
+        }
+
+        .lab {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .bg-grid {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            width: 300vw;
+            height: 300vh;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .row {
+            display: flex;
+            gap: 24px;
+            flex-shrink: 0;
+            will-change: transform;
+        }
+
+        .product-card {
+            width: 200px;
+            height: 200px;
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+            opacity: 0.3;
+            transition: opacity 0.2s;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .product-card::before {
+            display: none;
+        }
+
+        .fallback-bg { background: linear-gradient(135deg, #8b5cf6, #7e22ce); }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 1.5rem;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 3rem;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .logo-box {
+            width: 4rem;
+            height: 4rem;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, #8b5cf6, #7e22ce);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
+        }
+
+        .logo-box span {
+            font-size: 2rem;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+        
+        h5 {
+            font-size: 1rem;
+            font-weight: 400;
+            color: white;
+            letter-spacing: -0.025em;
+            line-height: 1.4;
+            max-width: 32rem;
+            margin-top: 0.75rem;
+        }
+        
+		h5 span {
+            color: #fbbf24;
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+        }
+		
+        h1 span {
+            color: #8c00ff;
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+        }
+
+        .btn {
+            position: relative;
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, #8c00ff, #6600ff);
+            border: none;
+            border-radius: 1rem;
+            color: white;
+            font-weight: 700;
+            font-size: 1.125rem;
+            cursor: pointer;
+            transition: all 0.3s ease-out;
+            animation: pulse-glow 3s ease-in-out infinite;;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #8c00ff, #6600ff);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-shine {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.7s;
+        }
+
+        .btn:hover .btn-shine {
+            transform: translateX(100%);
+        }
+
+        .arrow {
+            width: 1.25rem;
+            height: 1.25rem;
+            transition: transform 0.3s;
+        }
+
+        .btn:hover .arrow {
+            transform: translateX(4px);
+        }
+
+        /* Скрываем приветственное сообщение, оно больше не используется */
+        .welcome-message {
+            display: none;
+        }
+
+        .overlay-top {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, #03071299, #03071233, #03071299);
+            pointer-events: none;
+        }
+        .overlay-sides {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, #03071280, transparent, #03071280);
+            pointer-events: none;
+        }
+
+        @media (min-width: 768px) {
+            .product-card {
+                width: 260px;
+                height: 260px;
+            }
+            .logo-box {
+                width: 5rem;
+                height: 5rem;
+            }
+            .logo-box span { font-size: 2.5rem; }
+            h1 { font-size: 6rem; }
+            .btn { padding: 1.25rem 3.5rem; font-size: 1.25rem; }
+        }
+
+        @media (min-width: 1024px) {
+            .product-card {
+                width: 300px;
+                height: 300px;
+            }
+            h1 { font-size: 8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="lab">
+            <div class="bg-grid" id="animatedGrid"></div>
+            <div class="overlay-top"></div>
+            <div class="overlay-sides"></div>
+
+            <div class="content">
+                <div class="header">
+                    <h1>Patch<span>Lab</span></h1>
+                    <h5>Ставим патчи на скучные аватары. Есть база? Мы навесим на неё столько деталей, что родная мама не узнает.</h5>
+                </div>
+
+                <button class="btn" id="startButton">
+                    <div class="btn-shine"></div>
+                    <span class="btn-content" id="buttonText">
+                        <span>Начать</span>
+                        <svg class="arrow" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </span>
+                </button>
+
+                <!-- Сообщение скрыто, можно удалить, но оставим для совместимости -->
+                <div id="welcomeMessage" class="welcome-message" style="display: none;">✨ Вы в лаборатории прототипов</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const products = [
+                { image: './page/hoshi/img.png' },
+                { image: './page/sunaga/img.png' },
+                { image: './page/mizuki/img.png' },
+                { image: './page/tunle/img.png' },
+                { image: './page/sochi/img.png' },
+                { image: './page/sunagav2/img.png' },
+                { image: './page/hoshi/img.png' },
+                { image: './page/sunaga/img.png' },
+                { image: './page/mizuki/img.png' },
+                { image: './page/tunle/img.png' },
+                { image: './page/sochi/img.png' },
+                { image: './page/sunagav2/img.png' },
+                { image: './page/hoshi/img.png' },
+                { image: './page/sunaga/img.png' },
+                { image: './page/mizuki/img.png' },
+                { image: './page/tunle/img.png' },
+                { image: './page/sochi/img.png' },
+                { image: './page/sunagav2/img.png' },
+                { image: './page/hoshi/img.png' },
+                { image: './page/sunaga/img.png' },
+                { image: './page/mizuki/img.png' },
+                { image: './page/tunle/img.png' },
+                { image: './page/sochi/img.png' },
+                { image: './page/sunagav2/img.png' },
+                { image: './page/hoshi/img.png' },
+                { image: './page/sunaga/img.png' },
+                { image: './page/mizuki/img.png' },
+                { image: './page/tunle/img.png' },
+                { image: './page/sochi/img.png' },
+                { image: './page/sunagav2/img.png' },
+                { image: './page/hoshi/img.png' },
+                { image: './page/sunaga/img.png' },
+                { image: './page/mizuki/img.png' },
+                { image: './page/tunle/img.png' },
+                { image: './page/sochi/img.png' },
+                { image: './page/sunagav2/img.png' }
+            ];
+
+            const grid = document.getElementById('animatedGrid');
+            const gap = 24;
+
+            function createCard(product) {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.style.backgroundImage = `url('${product.image}')`;
+                card.classList.add('fallback-bg');
+                return card;
+            }
+
+            const totalRows = 8;
+            for (let rowIdx = 0; rowIdx < totalRows; rowIdx++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                for (let i = 0; i < 100; i++) {
+                    let productIndex = (rowIdx * 8 + i) % products.length;
+                    row.appendChild(createCard(products[productIndex]));
+                }
+                grid.appendChild(row);
+            }
+
+            function updateScrollDistance() {
+                const firstRow = document.querySelector('.row');
+                if (!firstRow) return;
+                const firstCard = firstRow.querySelector('.product-card');
+                if (!firstCard) return;
+
+                const cardWidth = firstCard.getBoundingClientRect().width;
+                const scrollDist = cardWidth * 8 + gap * 7;
+                document.documentElement.style.setProperty('--scroll-dist', scrollDist + 'px');
+            }
+
+            function applyAnimations() {
+                const rows = document.querySelectorAll('.row');
+                rows.forEach((row, index) => {
+                    const isReverse = index % 2 === 1;
+                    const speed = 30 + index * 5;
+                    row.style.animation = `scrollRow${isReverse ? 'Reverse' : ''} ${speed}s linear infinite`;
+                    row.style.marginLeft = isReverse ? '0px' : `-${index * 120}px`;
+                });
+            }
+
+            updateScrollDistance();
+            applyAnimations();
+
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    updateScrollDistance();
+                }, 100);
+            });
+
+            // Кнопка теперь перенаправляет на main.html
+            const btn = document.getElementById('startButton');
+            btn.addEventListener('click', () => {
+                window.location.href = 'main.html';
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PatchLab - Avatars</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(45deg, hsl(240 3.7% 15.9%), hsl(0deg 0% 0%));
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        header {
+            padding: 20px 10px 10px;
+        }
+
+        h1, h2, h3, p {
+            color: white;
+        }
+
+        /* Панель поиска и фильтров */
+        .controls {
+            max-width: 1200px;
+            margin: 20px auto 10px;
+            padding: 0 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-input {
+            flex: 1 1 300px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-size: 16px;
+            backdrop-filter: blur(5px);
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .search-input:focus {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .tag-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .tag-button {
+            padding: 8px 18px;
+            border: 2px solid transparent;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            backdrop-filter: blur(5px);
+        }
+
+        .tag-button:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .tag-button.active {
+            background: #6c5ce7;
+            border-color: white;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .avatar-card {
+            background: hsl(240deg 3.7% 15.9% / 30%);
+            backdrop-filter: blur(5px);
+            border-radius: 10px;
+            margin: 10px;
+            padding: 15px;
+            width: 400px;
+            text-align: center;
+            transition: transform 0.2s, opacity 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .avatar-card:hover {
+            transform: scale(1.02);
+        }
+
+        .avatar-card img {
+            max-width: 100%;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        /* Теги внутри карточки */
+        .card-tags {
+            margin: 8px 0 5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .card-tag {
+            background: rgba(108, 92, 231, 0.6);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            backdrop-filter: blur(2px);
+        }
+
+        h2 {
+            font-size: 1.5em;
+            margin: 10px 0 5px;
+        }
+
+        h3 {
+            font-size: 1em;
+            font-weight: normal;
+            line-height: 1.5;
+            margin: 5px 0;
+        }
+
+        footer {
+            background-color: hsl(240deg 3.7% 10%);
+            color: white;
+            text-align: center;
+            padding: 12px;
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .section {
+            margin: 0 0 30px;
+        }
+
+        .section-title {
+            text-align: center;
+            margin: 20px 0 10px;
+            font-size: 2em;
+            color: white;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        /* Скрытые карточки при фильтрации */
+        .avatar-card.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 style="text-align: center;">Витрина аватаров</h1>
+        <p style="text-align: center;"></p>
+    </header>
+
+    <!-- Панель поиска и фильтров -->
+    <div class="controls">
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск по имени или описанию...">
+        <div class="tag-filters" id="tagFilters">
+            <button class="tag-button active" data-tag="all">Все</button>
+            <button class="tag-button" data-tag="new">Новые</button>
+			<button class="tag-button" data-tag="free">В общем доступе</button>
+            <button class="tag-button" data-tag="old">Старые</button>
+            <button class="tag-button" data-tag="hoshi_n">Hoshi_N</button>
+            <button class="tag-button" data-tag="born_of_a_star">Born of a star</button>
+        </div>
+    </div>
+
+    <!-- Секция "В общем доступе" -->
+    <div class="section">
+        <h2 class="section-title">В общем доступе</h2>
+        <div class="container" id="public-container">
+            <!-- Карточка 1: Hoshi Nakata (теги: старая, Hoshi_N) -->
+            <div class="avatar-card" data-tags="old hoshi_n free">
+                <a href="./page/hoshi/hoshi_page.html">
+                    <img src="./page/hoshi/img.png" alt="Аватар 1">
+                </a>
+                <div class="card-tags">
+                    <span class="card-tag">Старые</span>
+					<span class="card-tag">В общем доступе</span>
+                    <span class="card-tag">Hoshi_N</span>
+                </div>
+                <h2>Hoshi Nakata (Хоши Наката)</h2>
+                <h3>Хоши Наката — самая старая и загадочная дама, появившаяся, по легендам, из тени. На первый взгляд, она выглядит улыбчивой и доброй бабушкой, но за этой милой улыбкой скрываются тайны семидесятилетней жизни.</h3>
+            </div>
+            <!-- Карточка 2: Sochi Delatan (теги: Hoshi_N) -->
+            <div class="avatar-card" data-tags="hoshi_n">
+                <a href="./page/sochi/sochi_page.html">
+                    <img src="./page/sochi/img.png" alt="Аватар 2">
+                </a>
+                <div class="card-tags">
+                    <span class="card-tag">Hoshi_N</span>
+                </div>
+                <h2>Sochi Delatan (Сочи Делатан)</h2>
+                <h3>Сочи Делатан — касатка и одна из служанок Качи Хосошино, обладающая стойкостью и харизмой. Она не из тех, с кем стоит обращаться легкомысленно.</h3>
+            </div>
+            <!-- Карточка 3: Sunaga Nazaki (теги: новая, Born of a star) -->
+            <div class="avatar-card" data-tags="old hoshi_n free">
+                <a href="./page/sunaga/sunaga_page.html">
+                    <img src="./page/sunaga/img.png" alt="Аватар 3">
+                </a>
+                <div class="card-tags">
+                    <span class="card-tag">Старые</span>
+					<span class="card-tag">В общем доступе</span>
+                    <span class="card-tag">Hoshi_N</span>
+                </div>
+                <h2>Sunaga Nazaki (Сунага Назаки)</h2>
+                <h3>Сунага — жительница яркого и радостного подводного мира, где её дни были полны смеха и приключений с семьей.</h3>
+            </div>
+            <!-- Карточка 4: Tunle Aredlon (теги: Hoshi_N, старая) -->
+            <div class="avatar-card" data-tags="old hoshi_n">
+                <a href="./page/tunle/tunle_page.html">
+                    <img src="./page/tunle/img.png" alt="Аватар 4">
+                </a>
+                <div class="card-tags">
+                    <span class="card-tag">Старые</span>
+                    <span class="card-tag">Hoshi_N</span>
+                </div>
+                <h2>Tunle Aredlon (Тунле Аредлон)</h2>
+                <h3>Тунле Аредион — молодая девушка с необычной, почти мистической внешностью. Тунле не выглядит неуклюжей или медлительной; напротив, в её движениях чувствуется грация и сила, присущая молодому, полному энергии существу.</h3>
+                <!-- Исправлена опечатка "нле" на "Тунле" -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция "Аватары на заказ" -->
+    <div class="section">
+        <h2 class="section-title">Аватары на заказ</h2>
+        <div class="container" id="custom-container">
+            <!-- Карточка 5: Mizuki Fujiwara (теги: новая, Hoshi_N, заказной) -->
+            <div class="avatar-card" data-tags="new hoshi_n born_of_a_star">
+                <a href="./page/mizuki/mizuki_page.html">
+                    <img src="./page/mizuki/img.png" alt="Аватар 5">
+                </a>
+                <div class="card-tags">
+                    <span class="card-tag">Новые</span>
+                    <span class="card-tag">Hoshi_N</span>
+                    <span class="card-tag">Born of a star</span>
+                    <span class="card-tag">Заказной</span>
+                </div>
+                <h2>Mizuki Fujiwara (Мизуки Фудзивара)</h2>
+                <h3>Мидзуки Фудзивара — командующий Седьмым Специальным Подразделением Флотилии Лисиц, элитной единицей военно-морских сил Кицунэ.</h3>
+                <!-- Убрана отдельная строка про заказчика, информация сохранена в тегах -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Секция "В разработке" -->
+    <div class="section">
+        <h2 class="section-title">В разработке</h2>
+        <div class="container" id="wip-container">
+            <!-- Карточка 6: Сунага 2.0 (теги: новая, Hoshi_N) -->
+            <div class="avatar-card" data-tags="new hoshi_n">
+                <a href="#">
+                    <img src="./page/sunagav2/img.png" alt="Аватар 6">
+                </a>
+                <div class="card-tags">
+                    <span class="card-tag">Новые</span>
+                    <span class="card-tag">Hoshi_N</span>
+                </div>
+                <h2>Сунага 2.0</h2>
+                <h3>Улучшение текстур, интересных фишек, одежды и многое чего.</h3>
+                <!-- Убрана строка "Надеюсь вам понравится" -->
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Контакты: 
+            <a href="https://discord.gg/XqdxtTubSa">PatchLab | Discord</a> | 
+            <a href="https://t.me/PatchLabVRC">Telegram</a>
+        </p>
+        <p>Материалы для аватаров:
+            <a href="https://booth.pm/en">BOOTH</a>
+        </p>
+        <p>&copy; 2025 PatchLab. Все права защищены.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.avatar-card');
+            const searchInput = document.getElementById('searchInput');
+            const tagButtons = document.querySelectorAll('.tag-button');
+            
+            let activeTag = 'all';      // текущий выбранный тег
+            let searchText = '';         // текст поиска
+
+            // Функция фильтрации карточек
+            function filterCards() {
+                cards.forEach(card => {
+                    // Проверка по тегу
+                    const cardTags = card.getAttribute('data-tags') || '';
+                    const tagMatch = activeTag === 'all' || cardTags.split(' ').includes(activeTag);
+
+                    // Проверка по тексту (регистронезависимо)
+                    const cardText = (card.innerText || '').toLowerCase();
+                    const textMatch = searchText === '' || cardText.includes(searchText.toLowerCase());
+
+                    // Показываем карточку, если выполняются оба условия
+                    if (tagMatch && textMatch) {
+                        card.classList.remove('hidden');
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Обработчик поиска
+            searchInput.addEventListener('input', function(e) {
+                searchText = e.target.value;
+                filterCards();
+            });
+
+            // Обработчик клика по тегам
+            tagButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Убираем активный класс со всех кнопок
+                    tagButtons.forEach(b => b.classList.remove('active'));
+                    // Активируем текущую
+                    this.classList.add('active');
+
+                    // Устанавливаем активный тег (значение data-tag)
+                    activeTag = this.getAttribute('data-tag');
+                    filterCards();
+                });
+            });
+
+            // Инициализация: показываем все карточки
+            filterCards();
+        });
+    </script>
+</body>
+</html>
